@@ -1,0 +1,16 @@
+{
+	"private": true,
+	"name": "server",
+	"displayName": "Modules Analyser Language Server",
+	"version": "0.1.0",
+	"author": "Tokamak Developments GK",
+	"license": "MIT",
+	"scripts": {
+		"build-nope:compile": "clang -I./generated/ src/component.c generated/modules_lsp.c generated/modules_lsp_component_type.o -o modules_lsp.wasm -mexec-model=reactor",
+		"build-nope:component": "wasm-tools component new ./modules_lsp.wasm -o modules_lsp.component.wasm",
+		"build:compile": "clang++ src/server.cpp C:/Kantan/build/wasi/modules-lsp/modules-lsp/libmodules-lsp.a C:/Kantan/build/wasi/liblsp-boot/liblsp-boot/liblsp-boot.a C:/Kantan/build/wasi/libboost-json-1.87.0/src/libboost_json.a -o modules_lsp.wasm",
+		"build": "npm-run-all build:*",
+		"generate:model": "wit2ts --outDir ./src ./wit",
+		"test:wasm": "node ./bin/send.js | wasmtime --wasm-features=threads --wasi-modules=experimental-wasi-threads target/wasm32-wasi-preview1-threads/release/server.wasm"
+	}
+}

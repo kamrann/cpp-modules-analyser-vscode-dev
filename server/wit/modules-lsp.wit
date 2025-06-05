@@ -1,0 +1,11 @@
+package tokamak:modules-lsp@0.1.0;
+
+interface add {
+    add: func(x: u32, y: u32) -> u32;
+    _start: func() -> u32;
+}
+
+world modules-lsp {
+    export add;
+    export _start;
+}
