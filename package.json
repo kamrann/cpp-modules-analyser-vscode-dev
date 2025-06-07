@@ -23,7 +23,7 @@
 	"main": "./client/out/extension",
 	"browser": "./client/dist/web/extension",
 	"activationEvents": [
-		"onLanguage:plaintext"
+		"workspaceContains:**/*.{cpp,hpp,cppm,mpp,ipp,cxx,hxx,cxxm,mxx,ixx,cc,h}"
 	],
 	"extensionDependencies": [
 		"ms-vscode.wasm-wasi-core"

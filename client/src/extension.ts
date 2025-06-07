@@ -60,7 +60,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const serverOptions: ServerOptions = useWasm ? serverOptionsWasm : serverOptionsNative;
 
 	const clientOptions: LanguageClientOptions = {
-		documentSelector: [{ language: 'plaintext' }],
+		documentSelector: [{ pattern: "**/*.{cpp,cppm,mpp,ipp,cxx,cxxm,mxx,ixx,cc}" }], //hpp,hxx,h  // language: 'c++', 
 		outputChannel: channel,
 		uriConverters: createUriConverters(),
 	};
