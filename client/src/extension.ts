@@ -14,7 +14,7 @@ let client: LanguageClient;
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	const channel = vscode.window.createOutputChannel('C++ Modules Analyser');
 	
-	const nativeServerLocation = vscode.Uri.joinPath(context.extensionUri, 'server', 'out', 'windows', 'modules_lsp.exe').fsPath;
+	const nativeServerLocation = vscode.Uri.joinPath(context.extensionUri, 'server', 'out', 'windows', 'modules-lsp.exe').fsPath;
 	const serverOptionsNative: ServerOptions = {
 		run: { command: nativeServerLocation, transport: TransportKind.stdio },
 		debug: {

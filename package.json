@@ -46,6 +46,7 @@
 		"dotenv-cli": "^8.0.0",
 		"esbuild": "^0.25.0",
 		"eslint": "^9.13.0",
+		"fs-extra": "^11.3.0",
 		"npm-run-all": "^4.1.5",
 		"serve": "^14.2.3",
 		"shx": "^0.4.0",
@@ -56,6 +57,8 @@
 		"postinstall": "cd client && npm install && cd ..",
 		"vscode:prepublish": "npm run build",
 		"build": "cd client && npm run compile && cd ../server && npm run build && cd ..",
+		"copy-dl-resources": "shx rm -f resources/* && shx cp linked_resources/* resources/",
+		"build-and-copy-resources": "npm run build && npm run copy-dl-resources",
 		"lint": "cd client && npm run lint && cd ..",
 		"esbuild": "node ./bin/esbuild.js",
 		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem"
