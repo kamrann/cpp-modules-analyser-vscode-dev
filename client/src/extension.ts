@@ -40,7 +40,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		// const bits = await workspace.fs.readFile(filename);
 		// const module = await WebAssembly.compile(bits);
 
-		const filename = vscode.Uri.joinPath(context.extensionUri, 'server', 'out', 'wasm', 'modules_lsp.wasm');
+		const filename = vscode.Uri.joinPath(context.extensionUri, 'server', 'out', 'wasm', 'modules-lsp.wasm');
 		const bits = await vscode.workspace.fs.readFile(filename);
 		const module = await WebAssembly.compile(bits);
 
