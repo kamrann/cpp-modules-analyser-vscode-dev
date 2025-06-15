@@ -73,6 +73,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		client.error(`Start failed`, error, 'force');
 	}
 
+	client.onNotification('cppModulesAnalyzer/publishModulesInfo', (params) => {
+		vscode.window.showInformationMessage(`Notification: ${JSON.stringify(params.moduleUnits)}`);
+	});
+
 	// interface CountFileParams {
 	// 	readonly folder: string
 	// };
