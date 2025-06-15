@@ -15,14 +15,17 @@ if (!src || !dest) {
   process.exit(1);
 }
 
-try {
-  await fse.copy(src, dest, {
-    dereference: true,
-    preserveTimestamps: true,
-    recursive: true
-  });
-  console.log(`Copied '${src}' to '${dest}' successfully.`);
-} catch (err) {
-  console.error(`Error copying '${src}' to '${dest}':`, err);
-  process.exit(1);
+if (fse.existsSync(src))
+{
+	try {
+		await fse.copy(src, dest, {
+			dereference: true,
+			preserveTimestamps: true,
+			recursive: true,		
+		});
+		console.log(`Copied '${src}' to '${dest}' successfully.`);
+	} catch (err) {
+		console.error(`Error copying '${src}' to '${dest}':`, err);
+		process.exit(1);
+	}
 }
