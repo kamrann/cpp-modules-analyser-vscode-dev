@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ModuleInfo, ModuleUnitInfo, ModulesModel } from './modules_model';
+import { ModuleInfo, ModuleUnitInfo, ModuleUnitKind, ModulesModel, moduleKindNames, moduleUnitCount, moduleUnitLocalDisplayName } from './modules_model';
 
 export class ModulesTreeProvider implements vscode.TreeDataProvider<ModulesTreeItem> {
   constructor(private modulesData: ModulesModel) {
@@ -14,9 +14,8 @@ export class ModulesTreeProvider implements vscode.TreeDataProvider<ModulesTreeI
   }
 
   getChildren(element?: ModulesTreeItem): Thenable<ModulesTreeItem[]> {
-    if (!this.modulesData) {
-      //vscode.window.showInformationMessage('No dependency in empty workspace');
-      return Promise.resolve([]);
+    if (!this.modulesData.isValid) {
+      return Promise.resolve([new ErrorStateItem("No modules data available, check Problems window.")]);
     }
 
     if (element) {
@@ -24,6 +23,7 @@ export class ModulesTreeProvider implements vscode.TreeDataProvider<ModulesTreeI
         element.children()
       );
     } else {
+      // Root module nodes
       return Promise.resolve(this.modulesData.modules.map(m => new ModuleItem(m)));
     }
   }
@@ -43,11 +43,23 @@ abstract class ModulesTreeItem extends vscode.TreeItem {
   }
 
   abstract children(): Array<ModulesTreeItem>;
+}
 
-  iconPath = {
-    light: path.join(__filename, '..', '..', 'resources', 'light', 'dependency.svg'),
-    dark: path.join(__filename, '..', '..', 'resources', 'dark', 'dependency.svg')
-  };
+class ErrorStateItem extends ModulesTreeItem {
+  constructor(
+    public readonly label: string
+  ) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.command = {
+      command: 'workbench.actions.view.problems',
+      title: 'View: Problems',
+    }
+  }
+
+  children()
+  {
+    return [];
+  }
 }
 
 class ModuleItem extends ModulesTreeItem {
@@ -56,12 +68,18 @@ class ModuleItem extends ModulesTreeItem {
     public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
   ) {
     super(moduleInfo.name, collapsibleState);
+    const numUnits = moduleUnitCount(moduleInfo);
+    this.tooltip = `Module ${moduleInfo.name} (${numUnits > 1 ? `${numUnits} module units` : 'single unit'})`;
+    this.iconPath = new vscode.ThemeIcon('package');
   }
 
   children()
   {
     return [
         new ModuleOwnedUnitItem(this.moduleInfo.primary),
+        ...this.moduleInfo.interfacePartitions.map(mu => new ModuleOwnedUnitItem(mu)),
+        ...this.moduleInfo.implementationPartitions.map(mu => new ModuleOwnedUnitItem(mu)),
+        ...this.moduleInfo.implementationUnits.map(mu => new ModuleOwnedUnitItem(mu)),
     ];
   }
 }
@@ -69,9 +87,16 @@ class ModuleItem extends ModulesTreeItem {
 class ModuleOwnedUnitItem extends ModulesTreeItem {
   constructor(
     private readonly moduleUnitInfo: ModuleUnitInfo,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None
   ) {
-    super(moduleUnitInfo.name, collapsibleState);
+    super(moduleUnitLocalDisplayName(moduleUnitInfo), collapsibleState);
+    this.description = `${moduleKindNames[moduleUnitInfo.kind]}`;
+    this.tooltip = `${moduleKindNames[moduleUnitInfo.kind]} at ${moduleUnitInfo.uri.path}`;
+    this.command = {
+      command: 'vscode.open',
+      title: 'Open Module Unit File',
+      arguments: [moduleUnitInfo.uri],
+    }
   }
 
   children()

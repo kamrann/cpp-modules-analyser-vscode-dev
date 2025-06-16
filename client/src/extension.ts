@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		run: { command: nativeServerLocation, transport: TransportKind.stdio },
 		debug: {
 			command: nativeServerLocation,
-			args: ["--wait-debugger"],
+			args: ["--wait-debugger=2"],
 			transport: TransportKind.stdio,
 		}
 	};
@@ -83,9 +83,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	);
 
 	client.onNotification('cppModulesAnalyzer/publishModulesInfo', (params) => {
-		vscode.window.showInformationMessage(`Notification: ${JSON.stringify(params.moduleUnits)}`);
-
-		modulesData.update(params.modules, params.moduleUnits);
+		if (params !== null) {
+			modulesData.update(params.modules, params.moduleUnits);
+		} else {
+			modulesData.setError();
+		}		
 	});
 
 	// interface CountFileParams {
