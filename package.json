@@ -65,7 +65,7 @@
 		"postinstall": "cd client && npm install && cd ..",
 		"vscode:prepublish": "npm run build",
 		"build": "cd client && npm run compile && cd ../server && npm run build && cd ..",
-		"copy-dl-resources": "shx rm -f resources/* && shx cp linked_resources/* resources/",
+		"copy-dl-resources": "shx rm -f resources/* && shx mkdir -p resources && shx cp linked_resources/* resources/",
 		"build-and-copy-resources": "npm run build && npm run copy-dl-resources",
 		"lint": "cd client && npm run lint && cd ..",
 		"esbuild": "node ./bin/esbuild.js",
