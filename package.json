@@ -35,7 +35,15 @@
 				"category": "Samples",
 				"title": "Count Files"
 			}
-		]
+		],
+		"views": {
+			"explorer": [
+				{
+					"id": "cppModules",
+					"name": "Modules"
+				}
+			]
+		}
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",

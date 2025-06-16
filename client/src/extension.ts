@@ -8,12 +8,14 @@ import { LanguageClient, LanguageClientOptions, ServerOptions, RequestType, Tran
 import { Wasm, ProcessOptions } from '@vscode/wasm-wasi/v1';
 import { WasmContext, Memory } from '@vscode/wasm-component-model';
 import { createStdioOptions, createUriConverters, startServer } from '@vscode/wasm-wasi-lsp';
+import { ModulesTreeProvider } from './modules_tree';
+import { ModulesModel } from './modules_model';
 
 let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	const channel = vscode.window.createOutputChannel('C++ Modules Analyser');
-	
+
 	const nativeServerLocation = vscode.Uri.joinPath(context.extensionUri, 'server', 'out', 'windows', 'modules-lsp.exe').fsPath;
 	const serverOptionsNative: ServerOptions = {
 		run: { command: nativeServerLocation, transport: TransportKind.stdio },
@@ -73,8 +75,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		client.error(`Start failed`, error, 'force');
 	}
 
+	const modulesData = new ModulesModel();
+	const modulesTreeProvider = new ModulesTreeProvider(modulesData);
+	vscode.window.registerTreeDataProvider(
+		'cppModules',
+		modulesTreeProvider
+	);
+
 	client.onNotification('cppModulesAnalyzer/publishModulesInfo', (params) => {
 		vscode.window.showInformationMessage(`Notification: ${JSON.stringify(params.moduleUnits)}`);
+
+		modulesData.update(params.modules, params.moduleUnits);
 	});
 
 	// interface CountFileParams {
