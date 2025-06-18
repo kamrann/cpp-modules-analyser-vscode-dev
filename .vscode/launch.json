@@ -7,16 +7,61 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "Run Example",
+			"name": "Run WASI",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}"
+			],
+			"env": {
+				"CPP_MODULES_ANALYSER_WASI_PATH": "C:/Kantan/build/wasi-dev/modules-lsp/modules-lsp/modules-lsp.wasi"
+			},
 			"outFiles": [
 				"${workspaceRoot}/client/out/**/*.js"
 			],
 			"autoAttachChildProcesses": true,
 			"preLaunchTask": {
 				"type": "npm",
-				"script": "build"
+				"script": "build-and-copy-resources"
+			}
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Run Native MSVC",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}"
+			],
+			"env": {
+				"CPP_MODULES_ANALYSER_NATIVE_PATH": "C:/Kantan/build/msvc-static/modules-lsp/modules-lsp/modules-lsp.exe"
+			},
+			"outFiles": [
+				"${workspaceRoot}/client/out/**/*.js"
+			],
+			"autoAttachChildProcesses": true,
+			"preLaunchTask": {
+				"type": "npm",
+				"script": "build-and-copy-resources"
+			}
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Run Native Clang",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}"
+			],
+			"env": {
+				"CPP_MODULES_ANALYSER_NATIVE_PATH": "C:/Kantan/build/clang-modules-opt/modules-lsp/modules-lsp/modules-lsp.exe"
+			},
+			"outFiles": [
+				"${workspaceRoot}/client/out/**/*.js"
+			],
+			"autoAttachChildProcesses": true,
+			"preLaunchTask": {
+				"type": "npm",
+				"script": "build-and-copy-resources"
 			}
 		}
 	]
