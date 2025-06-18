@@ -16,50 +16,60 @@ let client: LanguageClient;
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	const channel = vscode.window.createOutputChannel('C++ Modules Analyser');
 
-	const nativeServerLocation = vscode.Uri.joinPath(context.extensionUri, 'server', 'out', 'windows', 'modules-lsp.exe').fsPath;
-	const serverOptionsNative: ServerOptions = {
-		run: { command: nativeServerLocation, transport: TransportKind.stdio },
-		debug: {
-			command: nativeServerLocation,
-			args: ["--wait-debugger=2"],
-			transport: TransportKind.stdio,
+	const determineServerOptions = (): ServerOptions => {
+		const nativeExePath = process.env.CPP_MODULES_ANALYSER_NATIVE_PATH;
+
+		if (nativeExePath !== undefined)
+		{
+			channel.appendLine(`Configuring with native LSP server at ${nativeExePath}`);
+
+			const nativeServerLocation = nativeExePath;
+
+			return {
+				run: { command: nativeServerLocation, transport: TransportKind.stdio },
+				debug: {
+					command: nativeServerLocation,
+					args: ["--wait-debugger=2"],
+					transport: TransportKind.stdio,
+				}
+			};
 		}
+		else
+		{
+			const defaultWasiModulePath = vscode.Uri.joinPath(context.extensionUri, 'server', 'out', 'wasm', 'modules-lsp.wasm');
+			const wasiModulePath = process.env.CPP_MODULES_ANALYSER_WASI_PATH !== undefined ? vscode.Uri.file(process.env.CPP_MODULES_ANALYSER_WASI_PATH) : defaultWasiModulePath;
+
+			channel.appendLine(`Configuring with WASI LSP server at ${wasiModulePath}`);
+
+			return async () => {
+				const options: ProcessOptions = {
+					stdio: createStdioOptions(),
+					mountPoints: [
+						// A descriptor signaling that the workspace folder is mapped as `/workspace` or in case of a multi-root workspace each folder is mapped as `/workspaces/folder-name`.
+						{ kind: 'workspaceFolder' },
+						// Feels like should be using this but don't understand expectation of `path`. Keeps throwing file not found errors relating to ...\.dir.json
+						//{ kind: 'extensionLocation', extension: context, path: '/', mountPoint: '/funk' },
+						{ kind: 'vscodeFileSystem', uri: vscode.Uri.joinPath(context.extensionUri, 'resources'), mountPoint: '/resources' },
+					]
+				};
+
+				const bits = await vscode.workspace.fs.readFile(wasiModulePath);
+				const module = await WebAssembly.compile(bits);
+
+				const wasm: Wasm = await Wasm.load();
+				const process = await wasm.createProcess('lsp-server', module, { initial: 160, maximum: 160, shared: true }, options);
+
+				const decoder = new TextDecoder('utf-8');
+				process.stderr!.onData((data) => {
+					channel.append(decoder.decode(data));
+				});
+
+				return startServer(process);
+			};
+		}		
 	};
 
-	const serverOptionsWasm: ServerOptions = async () => {
-		const options: ProcessOptions = {
-			stdio: createStdioOptions(),
-			mountPoints: [
-				// A descriptor signaling that the workspace folder is mapped as `/workspace` or in case of a multi-root workspace each folder is mapped as `/workspaces/folder-name`.
-				{ kind: 'workspaceFolder' },
-				// Feels like should be using this but don't understand expectation of `path`. Keeps throwing file not found errors relating to ...\.dir.json
-				//{ kind: 'extensionLocation', extension: context, path: '/', mountPoint: '/funk' },
-				{ kind: 'vscodeFileSystem', uri: vscode.Uri.joinPath(context.extensionUri, 'resources'), mountPoint: '/resources' },
-			]
-		};
-
-		// const filename = Uri.joinPath(context.extensionUri, 'server', 'target', 'wasm32-wasip1-threads', 'release', 'server.wasm');
-		// const bits = await workspace.fs.readFile(filename);
-		// const module = await WebAssembly.compile(bits);
-
-		const filename = vscode.Uri.joinPath(context.extensionUri, 'server', 'out', 'wasm', 'modules-lsp.wasm');
-		const bits = await vscode.workspace.fs.readFile(filename);
-		const module = await WebAssembly.compile(bits);
-
-		const wasm: Wasm = await Wasm.load();
-		const process = await wasm.createProcess('lsp-server', module, { initial: 160, maximum: 160, shared: true }, options);
-
-		const decoder = new TextDecoder('utf-8');
-		process.stderr!.onData((data) => {
-			channel.append(decoder.decode(data));
-		});
-
-		return startServer(process);
-	};
-
-	const useWasm = false;
-
-	const serverOptions: ServerOptions = useWasm ? serverOptionsWasm : serverOptionsNative;
+	const serverOptions: ServerOptions = determineServerOptions();
 
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{ pattern: "**/*.{cpp,cppm,mpp,ipp,cxx,cxxm,mxx,ixx,cc}" }], //hpp,hxx,h  // language: 'c++', 
