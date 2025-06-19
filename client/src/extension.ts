@@ -19,6 +19,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const determineServerOptions = (): ServerOptions => {
 		const nativeExePath = process.env.CPP_MODULES_ANALYSER_NATIVE_PATH;
 
+		const commonArgs: string[] = [
+			'--dump-trace'
+		];
+
 		if (nativeExePath !== undefined)
 		{
 			channel.appendLine(`Configuring with native LSP server at ${nativeExePath}`);
@@ -29,7 +33,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 				run: { command: nativeServerLocation, transport: TransportKind.stdio },
 				debug: {
 					command: nativeServerLocation,
-					args: ["--wait-debugger=2"],
+					args: ["--wait-debugger=2", ...commonArgs],
 					transport: TransportKind.stdio,
 				}
 			};
@@ -50,7 +54,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 						// Feels like should be using this but don't understand expectation of `path`. Keeps throwing file not found errors relating to ...\.dir.json
 						//{ kind: 'extensionLocation', extension: context, path: '/', mountPoint: '/funk' },
 						{ kind: 'vscodeFileSystem', uri: vscode.Uri.joinPath(context.extensionUri, 'resources'), mountPoint: '/resources' },
-					]
+					],
+					args: [...commonArgs]
 				};
 
 				const bits = await vscode.workspace.fs.readFile(wasiModulePath);
