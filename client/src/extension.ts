@@ -65,8 +65,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 				const process = await wasm.createProcess('lsp-server', module, { initial: 160, maximum: 160, shared: true }, options);
 
 				const decoder = new TextDecoder('utf-8');
+				const buffer: string[] = [];
 				process.stderr!.onData((data) => {
-					channel.append(decoder.decode(data));
+					const decoded = decoder.decode(data);
+					const newline = decoded.indexOf("\n");
+					if (newline !== -1) {
+						buffer.push(decoded.substring(0, newline + 1));
+						channel.append(buffer.join(""));
+						buffer.length = 0;
+						buffer.push(decoded.substring(newline + 1));
+					} else {
+						buffer.push(decoded);
+					}					
 				});
 
 				return startServer(process);
