@@ -90,6 +90,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		documentSelector: [{ pattern: "**/*.{cpp,cppm,mpp,ipp,cxx,cxxm,mxx,ixx,cc}" }], //hpp,hxx,h  // language: 'c++', 
 		outputChannel: channel,
 		uriConverters: createUriConverters(),
+		initializationOptions: {
+			tempDefines: [
+				"k_enable_modules",
+				"k_enable_tp_modules",
+				"k_enable_import_std",
+				"kdeps_enable_modules",
+				"kdeps_enable_import_std",
+			],
+			tempExternalModules: [
+				"std",
+				"k3p.fmt",
+				"k3p.boost.json",
+				"function2",
+				"anyany",
+				"kcore",
+			],
+		},
 	};
 
 	client = new LanguageClient('lspClient', 'C++ Modules Analyser LSP Client', serverOptions, clientOptions);
