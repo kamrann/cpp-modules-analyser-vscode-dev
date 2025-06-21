@@ -18,10 +18,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 	const determineServerOptions = (): ServerOptions => {
 		const nativeExePath = process.env.CPP_MODULES_ANALYSER_NATIVE_PATH;
+		const toolchainRoot = process.env.CPP_MODULES_ANALYSER_TOOLCHAIN_ROOT;
+		const dumpTrace: boolean = process.env.CPP_MODULES_DUMP_TRACE != null;
 
-		const commonArgs: string[] = [
-			'--dump-trace'
-		];
+		const commonArgs: string[] = [];
+
+		if (toolchainRoot) {
+			commonArgs.push(`--toolchain-root="${toolchainRoot}"`);
+		}
+		if (dumpTrace) {
+			commonArgs.push('--dump-trace');
+		}
 
 		if (nativeExePath !== undefined)
 		{
