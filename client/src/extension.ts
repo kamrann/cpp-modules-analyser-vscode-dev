@@ -4,9 +4,9 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as vscode from 'vscode';
-import { LanguageClient, LanguageClientOptions, ServerOptions, RequestType, TransportKind } from 'vscode-languageclient/node';
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 import { Wasm, ProcessOptions } from '@vscode/wasm-wasi/v1';
-import { WasmContext, Memory } from '@vscode/wasm-component-model';
+//import { WasmContext, Memory } from '@vscode/wasm-component-model';
 import { createStdioOptions, createUriConverters, startServer } from '@vscode/wasm-wasi-lsp';
 import { ModulesTreeProvider } from './modules_tree';
 import { ModulesModel } from './modules_model';
@@ -19,8 +19,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const determineServerOptions = (): ServerOptions => {
 		const nativeExePath = process.env.CPP_MODULES_ANALYSER_NATIVE_PATH;
 		const toolchainRoot = process.env.CPP_MODULES_ANALYSER_TOOLCHAIN_ROOT;
-		const dumpTrace: boolean = process.env.CPP_MODULES_DUMP_TRACE != null;
-
+		const dumpTrace: boolean = process.env.CPP_MODULES_DUMP_TRACE !== undefined;
+		
 		const commonArgs: string[] = [];
 
 		if (toolchainRoot) {
@@ -35,12 +35,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			channel.appendLine(`Configuring with native LSP server at ${nativeExePath}`);
 
 			const nativeServerLocation = nativeExePath;
+			const waitDebugger = process.env.CPP_MODULES_WAIT_DEBUGGER;
+
+			const nativeArgs = [];
+
+			if (waitDebugger) {
+				nativeArgs.push(`--wait-debugger=${waitDebugger}`);
+			}
 
 			return {
 				run: { command: nativeServerLocation, transport: TransportKind.stdio },
 				debug: {
 					command: nativeServerLocation,
-					args: ["--wait-debugger=2", ...commonArgs],
+					args: [...commonArgs, ...nativeArgs],
 					transport: TransportKind.stdio,
 				}
 			};
@@ -126,31 +133,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 	const modulesData = new ModulesModel();
 	const modulesTreeProvider = new ModulesTreeProvider(modulesData);
-	vscode.window.registerTreeDataProvider(
-		'cppModules',
-		modulesTreeProvider
-	);
-
-	client.onNotification('cppModulesAnalyzer/publishModulesInfo', (params) => {
-		if (params !== null) {
-			modulesData.update(params.modules, params.moduleUnits);
-		} else {
-			modulesData.setError();
-		}		
+	const modulesTreeView = vscode.window.createTreeView('cppModules', {
+  	treeDataProvider: modulesTreeProvider,
+  	showCollapseAll: true,
 	});
 
-	// interface CountFileParams {
-	// 	readonly folder: string
-	// };
-	// const CountFilesRequest = new RequestType<CountFileParams, number, void>('kantan-wasi-lsp-server/countFiles');
-	// context.subscriptions.push(vscode.commands.registerCommand('tokamak.kantan-wasi-lsp-server.countFiles', async () => {
-	// 	// We assume we do have a folder.
-	// 	const folder = vscode.workspace.workspaceFolders![0].uri;
-	// 	// We need to convert the folder URI to a URI that maps to the mounted WASI file system. This is something
-	// 	// @vscode/wasm-wasi-lsp does for us.
-	// 	const result = await client.sendRequest(CountFilesRequest, { folder: client.code2ProtocolConverter.asUri(folder) });
-	// 	vscode.window.showInformationMessage(`The workspace contains ${result} files.`);
-	// }));
+	const formatModulesPendingMessage = () => {
+		return `${modulesData.isEmpty == false ? "⚠️ Below modules information is out of date. " : ""}Recalculating...`;
+	};
+	
+	modulesTreeView.message = formatModulesPendingMessage();
+
+	client.onNotification('cppModulesAnalyzer/publishModulesInfo', (params) => {
+		switch (params.event) {
+			case 'update':
+				if (params.modules) {
+					modulesData.update(params.modules, params.moduleUnits);
+					modulesTreeView.message = undefined;
+				} else {
+					//modulesData.setError();
+					modulesTreeView.message = "⚠️ Below modules information is stale. Fix items in Problems window to refresh.";
+				}
+				break;
+			case 'pending':
+				//modulesData.setError();
+				modulesTreeView.message = formatModulesPendingMessage();
+				break;
+		}
+	});
 }
 
 export function deactivate() {

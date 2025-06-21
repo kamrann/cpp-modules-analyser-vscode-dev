@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { ModuleInfo, ModuleUnitInfo, ModuleUnitKind, ModulesModel, moduleKindNames, moduleUnitCount, moduleUnitLocalDisplayName } from './modules_model';
 
 export class ModulesTreeProvider implements vscode.TreeDataProvider<ModulesTreeItem> {
@@ -14,9 +13,9 @@ export class ModulesTreeProvider implements vscode.TreeDataProvider<ModulesTreeI
   }
 
   getChildren(element?: ModulesTreeItem): Thenable<ModulesTreeItem[]> {
-    if (!this.modulesData.isValid) {
-      return Promise.resolve([new ErrorStateItem("No modules data available, check Problems window.")]);
-    }
+    // if (!this.modulesData.isValid) {
+    //   return Promise.resolve([new ErrorStateItem("No modules data available, check Problems window.")]);
+    // }
 
     if (element) {
       return Promise.resolve(
@@ -42,25 +41,25 @@ abstract class ModulesTreeItem extends vscode.TreeItem {
     //this.description = this.version;
   }
 
-  abstract children(): Array<ModulesTreeItem>;
+  abstract children(): ModulesTreeItem[];
 }
 
-class ErrorStateItem extends ModulesTreeItem {
-  constructor(
-    public readonly label: string
-  ) {
-    super(label, vscode.TreeItemCollapsibleState.None);
-    this.command = {
-      command: 'workbench.actions.view.problems',
-      title: 'View: Problems',
-    }
-  }
+// class ErrorStateItem extends ModulesTreeItem {
+//   constructor(
+//     public readonly label: string
+//   ) {
+//     super(label, vscode.TreeItemCollapsibleState.None);
+//     this.command = {
+//       command: 'workbench.actions.view.problems',
+//       title: 'View: Problems',
+//     };
+//   }
 
-  children()
-  {
-    return [];
-  }
-}
+//   children()
+//   {
+//     return [];
+//   }
+// }
 
 class ModuleItem extends ModulesTreeItem {
   constructor(
@@ -96,7 +95,7 @@ class ModuleOwnedUnitItem extends ModulesTreeItem {
       command: 'vscode.open',
       title: 'Open Module Unit File',
       arguments: [moduleUnitInfo.uri],
-    }
+    };
   }
 
   children()

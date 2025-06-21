@@ -8,9 +8,9 @@ type RawModuleUnitInfo = any;
 export interface ModuleInfo {
   readonly name: string;
   readonly primary: ModuleUnitInfo;
-  readonly interfacePartitions: Array<ModuleUnitInfo>;
-  readonly implementationPartitions: Array<ModuleUnitInfo>;
-  readonly implementationUnits: Array<ModuleUnitInfo>;
+  readonly interfacePartitions: ModuleUnitInfo[];
+  readonly implementationPartitions: ModuleUnitInfo[];
+  readonly implementationUnits: ModuleUnitInfo[];
 }
 
 export enum ModuleUnitKind {
@@ -71,9 +71,9 @@ function createModuleInfo(name: string, primary: ModuleUnitInfo): ModuleInfo {
 }
 
 export class ModulesModel {
-  isValid: boolean = false;
-  moduleUnits: Array<ModuleUnitInfo> = [];
-  modules: Array<ModuleInfo> = [];
+  isValid = false;
+  moduleUnits: ModuleUnitInfo[] = [];
+  modules: ModuleInfo[] = [];
 
   constructor() { }
 
@@ -86,21 +86,25 @@ export class ModulesModel {
     throw new Error(error);
   }
 
-  public update(rawModules: Array<RawModuleInfo>, rawModuleUnits: Array<RawModuleUnitInfo>): void {
+	public get isEmpty(): boolean {
+		return this.moduleUnits.length == 0;
+	}
+
+  public update(rawModules: RawModuleInfo[], rawModuleUnits: RawModuleUnitInfo[]): void {
     const uriConverters = createUriConverters();
     if (!uriConverters) {
       this.onError("URI converters unavailable");
     }
 
-    const moduleUnitFilter = (tu: any) => tu.result.module_unit.variant === 0;
-    const moduleUnitConverter = (tu: any) => {
+    const moduleUnitFilter = (tu: RawModuleUnitInfo) => tu.result.module_unit.variant === 0;
+    const moduleUnitConverter = (tu: RawModuleUnitInfo) => {
       const mu = tu.result.module_unit.value;
       const isPartition: boolean = mu.partition_name.variant === 0;
       const extractKind = () => {
         return mu.is_interface ?
           (isPartition ? ModuleUnitKind.interfacePartition : ModuleUnitKind.primaryInterface) :
           (isPartition ? ModuleUnitKind.implementationPartition : ModuleUnitKind.implementation);
-      }
+      };
       return {
         moduleName: mu.module_name.join("."),
         kind: extractKind(),
@@ -109,7 +113,7 @@ export class ModulesModel {
         // but seems to work (despite added a / before the drive letter), whereas Uri.parse gives us /workspace/... which is apparently not what VS Code wants...
         uri: uriConverters.protocol2Code(tu.identifier), //vscode.Uri.parse(tu.identifier),
       };
-    }
+    };
     this.moduleUnits = rawModuleUnits
       .filter(moduleUnitFilter)
       .map(moduleUnitConverter);
@@ -120,7 +124,7 @@ export class ModulesModel {
         throw new Error("Invalid modules data");
       }
       return entry;
-    }
+    };
 
     const findModule = (name: string): ModuleInfo => {
       const entry = this.modules.find(m => m.name === name);
@@ -128,7 +132,7 @@ export class ModulesModel {
         throw new Error("Invalid modules data");
       }
       return entry;
-    }
+    };
 
     this.modules = rawModules.map(m => createModuleInfo(m.name.join("."), findPrimaryUnit(m.name.join("."))));
     for (const mu of this.moduleUnits) {
