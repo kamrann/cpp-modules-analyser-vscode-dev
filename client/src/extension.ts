@@ -13,8 +13,123 @@ import { ModulesModel } from './modules_model';
 
 let client: LanguageClient;
 
+class DelegatingTreeDataProvider<T> implements vscode.TreeDataProvider<T> {
+  private _activeProvider: vscode.TreeDataProvider<T>;
+
+  private _onDidChangeTreeData = new vscode.EventEmitter<T | undefined>();
+  readonly onDidChangeTreeData: vscode.Event<T | undefined> = this._onDidChangeTreeData.event;
+
+	constructor(initialProvider: vscode.TreeDataProvider<T>) {
+		this._activeProvider = initialProvider;
+		this.forwardOnChanged();
+	}
+
+	forwardOnChanged() {
+		// Forward refresh requests
+    if (this._activeProvider.onDidChangeTreeData) {
+      this._activeProvider.onDidChangeTreeData(() => this.refresh());
+    }
+	}
+
+  setProvider(provider: vscode.TreeDataProvider<T>) {
+    this._activeProvider = provider;
+    this.forwardOnChanged();
+    this.refresh();
+  }
+
+  refresh(): void {
+    this._onDidChangeTreeData.fire(undefined);
+  }
+
+  getTreeItem(element: T): vscode.TreeItem | Thenable<vscode.TreeItem> {
+    return this._activeProvider.getTreeItem(element);
+  }
+
+  getChildren(element?: T): vscode.ProviderResult<T[]> {
+    return this._activeProvider.getChildren(element);
+  }
+
+  getParent?(element: T): vscode.ProviderResult<T> {
+    return this._activeProvider.getParent?.(element);
+  }
+}
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	const channel = vscode.window.createOutputChannel('C++ Modules Analyser');
+
+	const commandId = (id: string) => {
+		return `tokamak.cpp-modules-analyser-vscode.${id}`;
+	};
+
+	enum ViewMode {
+		modules,
+		importers,
+	}
+
+	const modulesData = new ModulesModel();
+	const tempData = new ModulesModel();
+
+	const formatModulesPendingMessage = () => {
+		return `${modulesData.isEmpty == false ? "⚠️ Below modules information is out of date. " : ""}Recalculating...`;
+	};
+	
+	interface ViewModeState {
+		provider: vscode.TreeDataProvider<vscode.TreeItem>;
+		message: string | undefined;
+	}
+
+	const viewModes: Record<ViewMode, ViewModeState> = {
+		[ViewMode.modules]: { provider: new ModulesTreeProvider(modulesData), message: formatModulesPendingMessage() },
+		[ViewMode.importers]: { provider: new ModulesTreeProvider(tempData), message: "todo" },
+	};
+
+	let currentViewMode = ViewMode.modules;
+	
+	const delegatingProvider = new DelegatingTreeDataProvider<vscode.TreeItem>(viewModes[currentViewMode].provider);
+
+	const treeView = vscode.window.createTreeView('cppModules', {
+			treeDataProvider: delegatingProvider,
+			showCollapseAll: true,
+		});
+	treeView.message = viewModes[currentViewMode].message;
+
+	function activateViewMode(mode: ViewMode) {
+		if (currentViewMode !== mode) {
+			treeView.message = viewModes[mode].message;
+			delegatingProvider.setProvider(viewModes[mode].provider);
+			currentViewMode = mode;
+		}
+	}
+
+	// @todo: maybe messages should just be specified as a function, and this just triggers an invocation
+	function updateViewModeMessage(mode: ViewMode, message: string | undefined) {
+		viewModes[mode].message = message;
+		if (mode === currentViewMode) {
+			treeView.message = message;
+		}
+	}
+	
+	context.subscriptions.push(vscode.commands.registerCommand(commandId('viewMode.modulesInfo'), async () => {
+		activateViewMode(ViewMode.modules);
+	}));
+	context.subscriptions.push(vscode.commands.registerCommand(commandId('viewMode.importers'), async () => {
+		activateViewMode(ViewMode.importers);
+	}));
+	context.subscriptions.push(vscode.commands.registerCommand(commandId('viewMode.select'), async () => {
+		interface ModePickItem extends vscode.QuickPickItem {
+			mode: ViewMode;
+		}
+		const options: ModePickItem[] = [
+      { label: 'Modules', description: 'Basic module information', picked: currentViewMode === ViewMode.modules, mode: ViewMode.modules },
+      { label: 'Importers', description: 'Tree of module imports', picked: currentViewMode === ViewMode.importers, mode: ViewMode.importers },
+    ];
+		const selection = await vscode.window.showQuickPick(options, {
+			placeHolder: "Select modules view mode",
+		});
+		if (selection) {
+			activateViewMode(selection.mode);
+		}
+	}));
 
 	const determineServerOptions = (): ServerOptions => {
 		const nativeExePath = process.env.CPP_MODULES_ANALYSER_NATIVE_PATH;
@@ -131,35 +246,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		client.error(`Start failed`, error, 'force');
 	}
 
-	const modulesData = new ModulesModel();
-	const modulesTreeProvider = new ModulesTreeProvider(modulesData);
-	const modulesTreeView = vscode.window.createTreeView('cppModules', {
-  	treeDataProvider: modulesTreeProvider,
-  	showCollapseAll: true,
-	});
-
-	const formatModulesPendingMessage = () => {
-		return `${modulesData.isEmpty == false ? "⚠️ Below modules information is out of date. " : ""}Recalculating...`;
-	};
-	
-	modulesTreeView.message = formatModulesPendingMessage();
-
 	client.onNotification('cppModulesAnalyzer/publishModulesInfo', (params) => {
+		let message: string | undefined = undefined;
 		switch (params.event) {
 			case 'update':
 				if (params.modules) {
 					modulesData.update(params.modules, params.moduleUnits);
-					modulesTreeView.message = undefined;
+					message = undefined;
 				} else {
 					//modulesData.setError();
-					modulesTreeView.message = "⚠️ Below modules information is stale. Fix items in Problems window to refresh.";
+					message = "⚠️ Below modules information is stale. Fix items in Problems window to refresh.";
 				}
 				break;
 			case 'pending':
 				//modulesData.setError();
-				modulesTreeView.message = formatModulesPendingMessage();
+				message = formatModulesPendingMessage();
 				break;
 		}
+		updateViewModeMessage(ViewMode.modules, message);
 	});
 }
 

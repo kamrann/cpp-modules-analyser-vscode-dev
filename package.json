@@ -1,5 +1,5 @@
 {
-	"name": "kantan-wasi-lsp-server",
+	"name": "cpp-modules-analyser-vscode",
 	"description": "An example demonstrating how to implement a language server as a WebAssembly module.",
 	"author": "Tokamak Developments GK",
 	"license": "MIT",
@@ -31,9 +31,20 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "tokamak.kantan-wasi-lsp-server.countFiles",
-				"category": "Samples",
-				"title": "Count Files"
+				"command": "tokamak.cpp-modules-analyser-vscode.viewMode.modulesInfo",
+				"category": "View Mode",
+				"title": "Modules"
+			},
+			{
+				"command": "tokamak.cpp-modules-analyser-vscode.viewMode.importers",
+				"category": "View Mode",
+				"title": "Importers"
+			},
+			{
+				"command": "tokamak.cpp-modules-analyser-vscode.viewMode.select",
+				"category": "View Mode",
+				"title": "Select View Mode",
+				"icon": "$(default-view-icon)"
 			}
 		],
 		"views": {
@@ -41,6 +52,25 @@
 				{
 					"id": "cppModules",
 					"name": "Modules"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "tokamak.cpp-modules-analyser-vscode.viewMode.modulesInfo",
+					"when": "view == cppModules",
+					"group": "viewMode"
+				},
+				{
+					"command": "tokamak.cpp-modules-analyser-vscode.viewMode.importers",
+					"when": "view == cppModules",
+					"group": "viewMode"
+				},
+				{
+					"command": "tokamak.cpp-modules-analyser-vscode.viewMode.select",
+					"when": "view == cppModules",
+					"group": "navigation"
 				}
 			]
 		}
