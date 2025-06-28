@@ -3,7 +3,7 @@ import * as path from 'path';
 import { createUriConverters } from '@vscode/wasm-wasi-lsp';
 
 type RawModuleInfo = any;
-type RawModuleUnitInfo = any;
+type RawTranslationUnitInfo = any;
 
 export interface ModuleInfo {
   readonly name: string;
@@ -27,11 +27,27 @@ export const moduleKindNames: Record<ModuleUnitKind, string> = {
   [ModuleUnitKind.implementation]: "Implementation unit",
 };
 
-export interface ModuleUnitInfo {
+// @todo: maybe should drop name given we have ref?
+export interface ModuleImport {
+  readonly name: string;
+  readonly isPartition: boolean;
+  // @todo: ideally should be readonly, would need to use an intermediate representation though as we can't form refs until we've created all MUs.
+  // alternatively, requiring that that server send TUs in dependency sorted order would probably be cleaner.
+  //readonly ref: ModuleInfo | ModuleUnitInfo;
+  ref: ModuleInfo | ModuleUnitInfo;
+}
+
+export interface TranslationUnitInfo {
+  readonly uri: vscode.Uri;
+  readonly imports: ModuleImport[];
+  readonly isModuleUnit: boolean;
+}
+
+export interface ModuleUnitInfo extends TranslationUnitInfo {
   readonly moduleName: string;
   readonly kind: ModuleUnitKind;
   readonly partitionName: string | undefined;
-  readonly uri: vscode.Uri;
+  readonly importers: TranslationUnitInfo[];
 }
 
 export function moduleUnitCount(m: ModuleInfo): number {
@@ -43,21 +59,26 @@ export function moduleUnitQualifiedName(mu: ModuleUnitInfo): string {
   return mu.partitionName ? (mu.moduleName + ":" + mu.partitionName) : mu.moduleName;
 }
 
-export function moduleUnitLocalName(mu: ModuleUnitInfo): string {
-  switch (mu.kind)
-  {
-    case ModuleUnitKind.primaryInterface:
-      return mu.moduleName;
-    case ModuleUnitKind.interfacePartition:
-    case ModuleUnitKind.implementationPartition:
-      return ":" + mu.partitionName;
-    case ModuleUnitKind.implementation:
-      return path.basename(mu.uri.path);
+export function translationUnitLocalName(tu: TranslationUnitInfo): string {
+  if (tu.isModuleUnit) {
+    const mu = tu as ModuleUnitInfo;
+    switch (mu.kind)
+    {
+      case ModuleUnitKind.primaryInterface:
+        return mu.moduleName;
+      case ModuleUnitKind.interfacePartition:
+      case ModuleUnitKind.implementationPartition:
+        return ":" + mu.partitionName;
+      case ModuleUnitKind.implementation:
+        return path.basename(mu.uri.path);
+    }
+  } else {
+    return path.basename(tu.uri.path);
   }
 }
 
-export function moduleUnitLocalDisplayName(mu: ModuleUnitInfo): string {
-  return moduleUnitLocalName(mu);
+export function translationUnitLocalDisplayName(tu: TranslationUnitInfo): string {
+  return translationUnitLocalName(tu);
 }
 
 function createModuleInfo(name: string, primary: ModuleUnitInfo): ModuleInfo {
@@ -70,8 +91,11 @@ function createModuleInfo(name: string, primary: ModuleUnitInfo): ModuleInfo {
   };
 }
 
+const brokenDataError = new Error("Invalid modules data");
+
 export class ModulesModel {
   isValid = false;
+  translationUnits: TranslationUnitInfo[] = [];
   moduleUnits: ModuleUnitInfo[] = [];
   modules: ModuleInfo[] = [];
 
@@ -87,67 +111,120 @@ export class ModulesModel {
   }
 
 	public get isEmpty(): boolean {
-		return this.moduleUnits.length == 0;
+		return this.translationUnits.length == 0;
 	}
 
-  public update(rawModules: RawModuleInfo[], rawModuleUnits: RawModuleUnitInfo[]): void {
+  public update(rawModules: RawModuleInfo[], rawTranslationUnits: RawTranslationUnitInfo[]): void {
     const uriConverters = createUriConverters();
     if (!uriConverters) {
       this.onError("URI converters unavailable");
     }
 
-    const moduleUnitFilter = (tu: RawModuleUnitInfo) => tu.result.module_unit.variant === 0;
-    const moduleUnitConverter = (tu: RawModuleUnitInfo) => {
-      const mu = tu.result.module_unit.value;
-      const isPartition: boolean = mu.partition_name.variant === 0;
+    const isModuleUnit = (tu: RawTranslationUnitInfo) => tu.result.module_unit.variant === 0;
+    const convertTranslationUnit = (tu: RawTranslationUnitInfo, isModuleUnit: boolean) => {
+      // @note: seems iffy to use this function imported from vscode/wasm-wasi-lsp, since this is just a VS Code <-> LSP conversion.
+      // but seems to work (despite added a / before the drive letter), whereas Uri.parse gives us /workspace/... which is apparently not what VS Code wants...
+      const uri = uriConverters.protocol2Code(tu.identifier); //vscode.Uri.parse(tu.identifier),
+      return {
+          uri: uri,
+          imports: tu.result.imports.map((imp: any) => ({
+            name: imp.data.name.join("."),
+            isPartition: imp.data.is_partition,
+            ref: null,
+          })),
+          isModuleUnit: isModuleUnit,
+        };
+    };
+    const convertModuleUnit = (tuInfo: TranslationUnitInfo, rawModuleUnit: any) => {
+      const isPartition: boolean = rawModuleUnit.partition_name.variant === 0;
       const extractKind = () => {
-        return mu.is_interface ?
+        return rawModuleUnit.is_interface ?
           (isPartition ? ModuleUnitKind.interfacePartition : ModuleUnitKind.primaryInterface) :
           (isPartition ? ModuleUnitKind.implementationPartition : ModuleUnitKind.implementation);
       };
       return {
-        moduleName: mu.module_name.join("."),
+        ...tuInfo,
+        moduleName: rawModuleUnit.module_name.join("."),
         kind: extractKind(),
-        partitionName: isPartition ? mu.partition_name.value.join(".") : null,
-        // @note: seems iffy to use this function imported from vscode/wasm-wasi-lsp, since this is just a VS Code <-> LSP conversion.
-        // but seems to work (despite added a / before the drive letter), whereas Uri.parse gives us /workspace/... which is apparently not what VS Code wants...
-        uri: uriConverters.protocol2Code(tu.identifier), //vscode.Uri.parse(tu.identifier),
+        partitionName: isPartition ? rawModuleUnit.partition_name.value.join(".") : null,
+        importers: [],
       };
     };
-    this.moduleUnits = rawModuleUnits
-      .filter(moduleUnitFilter)
-      .map(moduleUnitConverter);
+    const translationUnitConverter = (tu: RawTranslationUnitInfo) => {
+      if (isModuleUnit(tu)) {
+        return convertModuleUnit(convertTranslationUnit(tu, true), tu.result.module_unit.value);
+      } else {
+        return convertTranslationUnit(tu, false);
+      }
+    };
+
+    this.translationUnits = rawTranslationUnits
+      .map(translationUnitConverter);
+    this.moduleUnits = this.translationUnits
+      .filter(tu => tu.isModuleUnit)
+      .map(tu => tu as ModuleUnitInfo);
 
     const findPrimaryUnit = (name: string): ModuleUnitInfo => {
       const entry = this.moduleUnits.find(mu => mu.kind === ModuleUnitKind.primaryInterface && mu.moduleName === name);
       if (entry === undefined) {
-        throw new Error("Invalid modules data");
-      }
-      return entry;
-    };
-
-    const findModule = (name: string): ModuleInfo => {
-      const entry = this.modules.find(m => m.name === name);
-      if (entry === undefined) {
-        throw new Error("Invalid modules data");
+        throw brokenDataError;
       }
       return entry;
     };
 
     this.modules = rawModules.map(m => createModuleInfo(m.name.join("."), findPrimaryUnit(m.name.join("."))));
-    for (const mu of this.moduleUnits) {
-      switch (mu.kind) {
-        case ModuleUnitKind.primaryInterface:
-          break;
-        case ModuleUnitKind.interfacePartition:
-          findModule(mu.moduleName).interfacePartitions.push(mu);
-          break;
-        case ModuleUnitKind.implementationPartition:
-          findModule(mu.moduleName).implementationPartitions.push(mu);
-          break;
-        case ModuleUnitKind.implementation:
-          findModule(mu.moduleName).implementationUnits.push(mu);
-          break;
+
+    const findModule = (name: string): ModuleInfo => {
+      const entry = this.modules.find(m => m.name === name);
+      if (entry === undefined) {
+        throw brokenDataError;
+      }
+      return entry;
+    };
+
+    const findModulePartition = (moduleName: string, partitionName: string): ModuleUnitInfo => {
+      const entry = this.moduleUnits.find(mu => mu.moduleName === moduleName && mu.partitionName === partitionName);
+      if (entry === undefined) {
+        throw brokenDataError;
+      }
+      return entry;
+    };
+
+    const resolvePartitionImport = (importee: string, containingModule: string) => {
+      return findModulePartition(containingModule, importee);
+    };
+    const resolveModuleImport = (importee: string) => {
+      return findModule(importee);
+    };
+
+    for (const tu of this.translationUnits) {
+      // Resolve import references.
+      for (const imp of tu.imports) {
+        if (imp.isPartition) {
+          imp.ref = resolvePartitionImport(imp.name, (tu as ModuleUnitInfo).moduleName);
+          imp.ref.importers.push(tu);
+        } else {
+          imp.ref = resolveModuleImport(imp.name);
+          imp.ref.primary.importers.push(tu);
+        }
+      }
+
+      if (tu.isModuleUnit) {
+        const mu = tu as ModuleUnitInfo;
+        // Populate references in owning module.
+        switch (mu.kind) {
+          case ModuleUnitKind.primaryInterface:
+            break;
+          case ModuleUnitKind.interfacePartition:
+            findModule(mu.moduleName).interfacePartitions.push(mu);
+            break;
+          case ModuleUnitKind.implementationPartition:
+            findModule(mu.moduleName).implementationPartitions.push(mu);
+            break;
+          case ModuleUnitKind.implementation:
+            findModule(mu.moduleName).implementationUnits.push(mu);
+            break;
+        }
       }
     }
 

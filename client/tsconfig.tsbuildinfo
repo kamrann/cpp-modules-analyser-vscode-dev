@@ -1,1 +1,1 @@
-{"root":["./src/extension.ts","./src/modules_model.ts","./src/modules_tree.ts"],"version":"5.8.2"}
+{"root":["./src/extension.ts","./src/module_unit_importees_tree.ts","./src/module_unit_imports_tree.ts","./src/modules_model.ts","./src/modules_tree.ts","./src/tree_utils.ts"],"version":"5.8.2"}

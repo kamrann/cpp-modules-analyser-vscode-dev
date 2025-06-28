@@ -9,6 +9,8 @@ import { Wasm, ProcessOptions } from '@vscode/wasm-wasi/v1';
 //import { WasmContext, Memory } from '@vscode/wasm-component-model';
 import { createStdioOptions, createUriConverters, startServer } from '@vscode/wasm-wasi-lsp';
 import { ModulesTreeProvider } from './modules_tree';
+import { ModuleUnitImportsTreeProvider } from './module_unit_imports_tree';
+import { ModuleUnitImporteesTreeProvider } from './module_unit_importees_tree';
 import { ModulesModel } from './modules_model';
 
 let client: LanguageClient;
@@ -64,23 +66,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	enum ViewMode {
 		modules,
 		importers,
+		importees,
 	}
 
 	const modulesData = new ModulesModel();
-	const tempData = new ModulesModel();
 
 	const formatModulesPendingMessage = () => {
 		return `${modulesData.isEmpty == false ? "⚠️ Below modules information is out of date. " : ""}Recalculating...`;
 	};
 	
 	interface ViewModeState {
+		displayName: string,
 		provider: vscode.TreeDataProvider<vscode.TreeItem>;
 		message: string | undefined;
 	}
 
 	const viewModes: Record<ViewMode, ViewModeState> = {
-		[ViewMode.modules]: { provider: new ModulesTreeProvider(modulesData), message: formatModulesPendingMessage() },
-		[ViewMode.importers]: { provider: new ModulesTreeProvider(tempData), message: "todo" },
+		[ViewMode.modules]: { displayName: "Basic Info", provider: new ModulesTreeProvider(modulesData), message: formatModulesPendingMessage() },
+		[ViewMode.importers]: { displayName: "Imports", provider: new ModuleUnitImportsTreeProvider(modulesData), message: formatModulesPendingMessage() },
+		[ViewMode.importees]: { displayName: "Importees", provider: new ModuleUnitImporteesTreeProvider(modulesData), message: formatModulesPendingMessage() },
 	};
 
 	let currentViewMode = ViewMode.modules;
@@ -88,13 +92,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const delegatingProvider = new DelegatingTreeDataProvider<vscode.TreeItem>(viewModes[currentViewMode].provider);
 
 	const treeView = vscode.window.createTreeView('cppModules', {
-			treeDataProvider: delegatingProvider,
-			showCollapseAll: true,
-		});
+		treeDataProvider: delegatingProvider,
+		showCollapseAll: true,
+	});
+	treeView.description = viewModes[currentViewMode].displayName,
 	treeView.message = viewModes[currentViewMode].message;
 
 	function activateViewMode(mode: ViewMode) {
 		if (currentViewMode !== mode) {
+			treeView.description = viewModes[mode].displayName,
 			treeView.message = viewModes[mode].message;
 			delegatingProvider.setProvider(viewModes[mode].provider);
 			currentViewMode = mode;
@@ -115,14 +121,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	context.subscriptions.push(vscode.commands.registerCommand(commandId('viewMode.importers'), async () => {
 		activateViewMode(ViewMode.importers);
 	}));
+	context.subscriptions.push(vscode.commands.registerCommand(commandId('viewMode.importees'), async () => {
+		activateViewMode(ViewMode.importees);
+	}));
 	context.subscriptions.push(vscode.commands.registerCommand(commandId('viewMode.select'), async () => {
 		interface ModePickItem extends vscode.QuickPickItem {
 			mode: ViewMode;
 		}
 		const options: ModePickItem[] = [
-      { label: 'Modules', description: 'Basic module information', picked: currentViewMode === ViewMode.modules, mode: ViewMode.modules },
-      { label: 'Importers', description: 'Tree of module imports', picked: currentViewMode === ViewMode.importers, mode: ViewMode.importers },
-    ];
+			{ label: 'Modules', description: 'Basic module information', picked: currentViewMode === ViewMode.modules, mode: ViewMode.modules },
+			{ label: 'Importers', description: 'Tree of module imports', picked: currentViewMode === ViewMode.importers, mode: ViewMode.importers },
+			{ label: 'Importees', description: 'Tree of module importees', picked: currentViewMode === ViewMode.importees, mode: ViewMode.importees },
+		];
 		const selection = await vscode.window.showQuickPick(options, {
 			placeHolder: "Select modules view mode",
 		});
@@ -251,7 +261,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		switch (params.event) {
 			case 'update':
 				if (params.modules) {
-					modulesData.update(params.modules, params.moduleUnits);
+					modulesData.update(params.modules, params.translationUnits);
 					message = undefined;
 				} else {
 					//modulesData.setError();
@@ -263,7 +273,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 				message = formatModulesPendingMessage();
 				break;
 		}
+		// @note: for now at least, these use the same datasource and are always in sync
 		updateViewModeMessage(ViewMode.modules, message);
+		updateViewModeMessage(ViewMode.importers, message);
+		updateViewModeMessage(ViewMode.importees, message);
 	});
 }
 

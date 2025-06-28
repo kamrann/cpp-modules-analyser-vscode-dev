@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { ModuleInfo, ModuleUnitInfo, ModuleUnitKind, ModulesModel, moduleKindNames, moduleUnitCount, moduleUnitLocalDisplayName } from './modules_model';
+import { ModuleInfo, ModuleUnitInfo, ModulesModel, moduleUnitCount, translationUnitLocalDisplayName } from './modules_model';
+import * as treeUtils from './tree_utils'
 
 export class ModulesTreeProvider implements vscode.TreeDataProvider<ModulesTreeItem> {
   constructor(private modulesData: ModulesModel) {
@@ -38,7 +39,6 @@ abstract class ModulesTreeItem extends vscode.TreeItem {
   ) {
     super(label, collapsibleState);
     this.tooltip = `${this.label}`;
-    //this.description = this.version;
   }
 
   abstract children(): ModulesTreeItem[];
@@ -88,14 +88,8 @@ class ModuleOwnedUnitItem extends ModulesTreeItem {
     private readonly moduleUnitInfo: ModuleUnitInfo,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None
   ) {
-    super(moduleUnitLocalDisplayName(moduleUnitInfo), collapsibleState);
-    this.description = `${moduleKindNames[moduleUnitInfo.kind]}`;
-    this.tooltip = `${moduleKindNames[moduleUnitInfo.kind]} at ${moduleUnitInfo.uri.path}`;
-    this.command = {
-      command: 'vscode.open',
-      title: 'Open Module Unit File',
-      arguments: [moduleUnitInfo.uri],
-    };
+    super(translationUnitLocalDisplayName(moduleUnitInfo), collapsibleState);
+    treeUtils.configureTranslationUnitTreeItem(this, moduleUnitInfo);
   }
 
   children()
