@@ -1,23 +1,16 @@
 {
-	"private": true,
-	"name": "server",
-	"displayName": "C++ Modules Analyser",
-	"version": "0.1.0",
-	"author": "Tokamak Developments GK",
-	"license": "MIT",
-	"type":"module",
-	"scripts": {
-		"build-nope:compile": "clang -I./generated/ src/component.c generated/modules_lsp.c generated/modules_lsp_component_type.o -o modules_lsp.wasm -mexec-model=reactor",
-		"build-nope:component": "wasm-tools component new ./modules_lsp.wasm -o modules_lsp.component.wasm",
-		"build-windows:compile-wasm": "shx mkdir -p out/wasm/ && dotenv -- node scripts/run-tool.js CLANG_WASM -v -fuse-ld=C:/WASM/wasi-sdk-25.0-x86_64-windows/bin/wasm-ld.exe -g -Wl,-zstack-size=8388608 -Wl,--initial-memory=268435456 -Wl,--max-memory=268435456 src/server.cpp -lwasi-emulated-signal external-build/modules-lsp/libmodules-lsp/libmodules-lsp.a external-build/liblsp-boot/liblsp-boot/liblsp-boot.a external-build/kdeps/kdeps/libkdeps.a external-build/kdeps/kdeps-ops/libkdeps-ops.a external-build/kdeps/decl/libdecl.a external-build/kdeps/parse/libparse.a external-build/decl-support/decl-support/libdecl-support.a external-build/k-dl-pp/k-dl-pp/components/dl-pp/libdl-pp.a external-build/libboost-json-1.87.0/src/libboost_json.a external-build/fmt-11.1.4/fmt/libfmt.a -o out/wasm/modules-lsp.wasm",
-		"build-windows:compile-wasm-clang-src": "shx mkdir -p out/wasm/ && dotenv -- node scripts/run-tool.js CLANG -v --target=wasm32-wasi --sysroot=C:/WASM/wasi-sysroot-25.0 -fno-exceptions -fuse-ld=C:/WASM/wasi-sdk-25.0-x86_64-windows/bin/wasm-ld.exe -g -Wl,-zstack-size=8388608 -Wl,--initial-memory=268435456 -Wl,--max-memory=268435456 src/server.cpp -lwasi-emulated-signal external-build-clang-src/modules-lsp/libmodules-lsp/libmodules-lsp.a external-build-clang-src/liblsp-boot/liblsp-boot/liblsp-boot.a external-build-clang-src/kdeps/kdeps/libkdeps.a external-build-clang-src/kdeps/kdeps-ops/libkdeps-ops.a external-build-clang-src/kdeps/decl/libdecl.a external-build-clang-src/kdeps/parse/libparse.a external-build-clang-src/decl-support/decl-support/libdecl-support.a external-build-clang-src/k-dl-pp/k-dl-pp/components/dl-pp/libdl-pp.a external-build-clang-src/libboost-json-1.87.0/src/libboost_json.a external-build-clang-src/fmt-11.1.4/fmt/libfmt.a -o out/wasm/modules-lsp.wasm",
-		"build-windows:compile-native": "shx mkdir -p ./out/windows/ && shx cp ./external-build-native/modules-lsp/modules-lsp/modules-lsp.exe ./out/windows/modules-lsp.exe && shx rm -rf ./out/windows/modules-lsp.exe.dlls && node ./scripts/deep-copy-dir.js ./external-build-native/modules-lsp/modules-lsp/modules-lsp.exe.dlls ./out/windows/modules-lsp.exe.dlls",
-		"note-compile-native": "Win SxS doesn't seem to like us symlinking to the dlls directory. And if we copy the dir with symlinks, then break due to relative paths. Hence deep copy. -- shx ln -s ../../external-build-native/modules-lsp/modules-lsp/modules-lsp.exe.dlls ./out/windows/modules-lsp.exe.dlls",
-		"build-windows:compile-native-msvc": "shx mkdir -p out/windows/ && shx cp external-build-native-msvc/modules-lsp/modules-lsp/modules-lsp.exe out/windows/modules-lsp.exe",
-		"build:windows": "npm-run-all build-windows:compile-native-msvc",
-		"build:linux": "npm-run-all build-linux:*",
-		"build": "node scripts/build.js",
-		"generate:model": "wit2ts --outDir ./src ./wit",
-		"test:wasm": "node ./bin/send.js | wasmtime --wasm-features=threads --wasi-modules=experimental-wasi-threads target/wasm32-wasi-preview1-threads/release/server.wasm"
-	}
+  "private": true,
+  "name": "server",
+  "displayName": "C++ Modules Analyser",
+  "version": "0.1.0",
+  "author": "Tokamak Developments GK",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:windows": "",
+    "build:linux": "npm-run-all build-linux:*",
+    "build": "node scripts/build.js",
+    "generate:model": "wit2ts --outDir ./src ./wit",
+    "test:wasm": "node ./bin/send.js | wasmtime --wasm-features=threads --wasi-modules=experimental-wasi-threads target/wasm32-wasi-preview1-threads/release/server.wasm"
+  }
 }
