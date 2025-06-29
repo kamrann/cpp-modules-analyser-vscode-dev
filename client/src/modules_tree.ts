@@ -5,7 +5,7 @@ import * as treeUtils from './tree_utils'
 export class ModulesTreeProvider implements vscode.TreeDataProvider<ModulesTreeItem> {
   constructor(private modulesData: ModulesModel) {
     modulesData.onDidChangeModulesData((model: ModulesModel) => {
-        this._onDidChangeTreeData.fire();
+      this._onDidChangeTreeData.fire();
     });
   }
 
@@ -72,13 +72,12 @@ class ModuleItem extends ModulesTreeItem {
     this.iconPath = new vscode.ThemeIcon('package');
   }
 
-  children()
-  {
+  children() {
     return [
-        new ModuleOwnedUnitItem(this.moduleInfo.primary),
-        ...this.moduleInfo.interfacePartitions.map(mu => new ModuleOwnedUnitItem(mu)),
-        ...this.moduleInfo.implementationPartitions.map(mu => new ModuleOwnedUnitItem(mu)),
-        ...this.moduleInfo.implementationUnits.map(mu => new ModuleOwnedUnitItem(mu)),
+      new ModuleOwnedUnitItem(this.moduleInfo.primary),
+      ...this.moduleInfo.interfacePartitions.map(mu => new ModuleOwnedUnitItem(mu)),
+      ...this.moduleInfo.implementationPartitions.map(mu => new ModuleOwnedUnitItem(mu)),
+      ...this.moduleInfo.implementationUnits.map(mu => new ModuleOwnedUnitItem(mu)),
     ];
   }
 }
@@ -92,8 +91,7 @@ class ModuleOwnedUnitItem extends ModulesTreeItem {
     treeUtils.configureTranslationUnitTreeItem(this, moduleUnitInfo);
   }
 
-  children()
-  {
+  children() {
     return [];
   }
 }

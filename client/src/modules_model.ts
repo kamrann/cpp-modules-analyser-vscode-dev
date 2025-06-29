@@ -62,8 +62,7 @@ export function moduleUnitQualifiedName(mu: ModuleUnitInfo): string {
 export function translationUnitLocalName(tu: TranslationUnitInfo): string {
   if (tu.isModuleUnit) {
     const mu = tu as ModuleUnitInfo;
-    switch (mu.kind)
-    {
+    switch (mu.kind) {
       case ModuleUnitKind.primaryInterface:
         return mu.moduleName;
       case ModuleUnitKind.interfacePartition:
@@ -110,9 +109,9 @@ export class ModulesModel {
     throw new Error(error);
   }
 
-	public get isEmpty(): boolean {
-		return this.translationUnits.length == 0;
-	}
+  public get isEmpty(): boolean {
+    return this.translationUnits.length == 0;
+  }
 
   public update(rawModules: RawModuleInfo[], rawTranslationUnits: RawTranslationUnitInfo[]): void {
     const uriConverters = createUriConverters();
@@ -126,14 +125,14 @@ export class ModulesModel {
       // but seems to work (despite added a / before the drive letter), whereas Uri.parse gives us /workspace/... which is apparently not what VS Code wants...
       const uri = uriConverters.protocol2Code(tu.identifier); //vscode.Uri.parse(tu.identifier),
       return {
-          uri: uri,
-          imports: tu.result.imports.map((imp: any) => ({
-            name: imp.data.name.join("."),
-            isPartition: imp.data.is_partition,
-            ref: null,
-          })),
-          isModuleUnit: isModuleUnit,
-        };
+        uri: uri,
+        imports: tu.result.imports.map((imp: any) => ({
+          name: imp.data.name.join("."),
+          isPartition: imp.data.is_partition,
+          ref: null,
+        })),
+        isModuleUnit: isModuleUnit,
+      };
     };
     const convertModuleUnit = (tuInfo: TranslationUnitInfo, rawModuleUnit: any) => {
       const isPartition: boolean = rawModuleUnit.partition_name.variant === 0;

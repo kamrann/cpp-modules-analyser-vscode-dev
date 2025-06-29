@@ -5,7 +5,7 @@ import * as treeUtils from './tree_utils'
 export class ModuleUnitImporteesTreeProvider implements vscode.TreeDataProvider<ModuleUnitImporteesTreeItem> {
   constructor(private modulesData: ModulesModel) {
     modulesData.onDidChangeModulesData((model: ModulesModel) => {
-        this._onDidChangeTreeData.fire();
+      this._onDidChangeTreeData.fire();
     });
   }
 
@@ -50,8 +50,7 @@ class TranslationUnitItem extends ModuleUnitImporteesTreeItem {
     treeUtils.configureTranslationUnitTreeItem(this, translationUnitInfo);
   }
 
-  children()
-  {
+  children() {
     if (this.translationUnitInfo.isModuleUnit) {
       const mu = this.translationUnitInfo as ModuleUnitInfo;
       return mu.importers.map((tu: TranslationUnitInfo) => new ImportingModuleUnitItem(tu));
