@@ -1,71 +1,95 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-//@ts-check
 const esbuild = require('esbuild');
+const glob = require('glob');
+const path = require('path');
+const polyfill = require('@esbuild-plugins/node-globals-polyfill');
 
-/**
- * @typedef {import('esbuild').BuildOptions} BuildOptions
- */
+const target = process.argv[2] || 'node'; // 'node' or 'browser'
 
-/** @type BuildOptions */
-const sharedWebOptions = {
-	bundle: true,
-	external: ['vscode'],
-	target: 'es2020',
-	platform: 'browser',
-	sourcemap: true,
-};
+const production = process.argv.includes('--production');
+const watch = process.argv.includes('--watch');
 
-/** @type BuildOptions */
-const webOptions = {
-	entryPoints: ['src/extension.ts'],
-	outfile: 'dist/web/extension.js',
-	format: 'cjs',
-	...sharedWebOptions,
-};
+async function main() {
+  const ctx = await esbuild.context({
+    entryPoints: [`src/${target}/extension-${target}.ts`],
+    //, 'src/web/test/suite/extensionTests.ts'],
+    bundle: true,
+    format: 'cjs',
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: target,
+    outdir: `dist/${target}`,
+    external: ['vscode'],
+    logLevel: 'warning',
+    // Node.js global to browser globalThis
+    define: target === 'browser' ? { global: 'globalThis' } : undefined,
 
-/** @type BuildOptions */
-const sharedDesktopOptions = {
-	bundle: true,
-	external: ['vscode'],
-	target: 'es2020',
-	platform: 'node',
-	sourcemap: true,
-};
-
-/** @type BuildOptions */
-const desktopOptions = {
-	entryPoints: ['src/extension.ts'],
-	outfile: 'dist/desktop/extension.js',
-	format: 'cjs',
-	...sharedDesktopOptions,
-};
-
-function createContexts() {
-	return Promise.all([
-		esbuild.context(webOptions),
-		esbuild.context(desktopOptions),
-	]);
+    plugins: [
+      ...(target === 'browser' ? [polyfill.NodeGlobalsPolyfillPlugin({ process: true, buffer: true })] : []),
+      testBundlePlugin,
+      esbuildProblemMatcherPlugin /* add to the end of plugins array */
+    ]
+  });
+  if (watch) {
+    await ctx.watch();
+  } else {
+    await ctx.rebuild();
+    await ctx.dispose();
+  }
 }
 
-createContexts().then(contexts => {
-	if (process.argv[2] === '--watch') {
-		const promises = [];
-		for (const context of contexts) {
-			promises.push(context.watch());
-		}
-		return Promise.all(promises).then(() => { return undefined; });
-	} else {
-		const promises = [];
-		for (const context of contexts) {
-			promises.push(context.rebuild());
-		}
-		Promise.all(promises).then(async () => {
-			for (const context of contexts) {
-				await context.dispose();
-			}
-		}).then(() => { return undefined; }).catch(console.error);
-	}
-}).catch(console.error);
+/**
+ * For web extension, all tests, including the test runner, need to be bundled into
+ * a single module that has a exported `run` function .
+ * This plugin bundles implements a virtual file extensionTests.ts that bundles all these together.
+ * @type {import('esbuild').Plugin}
+ */
+const testBundlePlugin = {
+  name: 'testBundlePlugin',
+  setup(build) {
+    build.onResolve({ filter: /[\/\\]extensionTests\.ts$/ }, args => {
+      if (args.kind === 'entry-point') {
+        return { path: path.resolve(args.path) };
+      }
+    });
+    build.onLoad({ filter: /[\/\\]extensionTests\.ts$/ }, async args => {
+      const testsRoot = path.join(__dirname, 'src/web/test/suite');
+      const files = await glob.glob('*.test.{ts,tsx}', { cwd: testsRoot, posix: true });
+      return {
+        contents:
+          `export { run } from './mochaTestRunner.ts';` +
+          files.map(f => `import('./${f}'); `).join(''),
+        watchDirs: files.map(f => path.dirname(path.resolve(testsRoot, f))),
+        watchFiles: files.map(f => path.resolve(testsRoot, f))
+      };
+    });
+  }
+};
+
+/**
+ * This plugin hooks into the build process to print errors in a format that the problem matcher in
+ * Visual Studio Code can understand.
+ * @type {import('esbuild').Plugin}
+ */
+const esbuildProblemMatcherPlugin = {
+  name: 'esbuild-problem-matcher',
+
+  setup(build) {
+    build.onStart(() => {
+      console.log('[watch] build started');
+    });
+    build.onEnd(result => {
+      result.errors.forEach(({ text, location }) => {
+        console.error(`✘[ERROR] ${text} `);
+        if (location == null) return;
+        console.error(`    ${location.file}:${location.line}:${location.column}: `);
+      });
+      console.log('[watch] build finished');
+    });
+  }
+};
+
+main().catch(e => {
+  console.error(e);
+  process.exit(1);
+});

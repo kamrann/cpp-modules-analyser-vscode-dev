@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { ModuleInfo, ModuleUnitInfo, ModulesModel, moduleUnitCount, translationUnitLocalDisplayName } from './modules_model';
-import * as treeUtils from './tree_utils'
+import { ModuleInfo, ModuleUnitInfo, ModulesModel, moduleUnitCount, translationUnitLocalDisplayName } from '../modules-model';
+import * as treeUtils from './tree-utils'
 
 export class ModulesTreeProvider implements vscode.TreeDataProvider<ModulesTreeItem> {
   constructor(private modulesData: ModulesModel) {

@@ -1,37 +1,128 @@
 {
-	"name": "client",
-	"description": "The language client",
-	"author": "Microsoft Corporation",
-	"license": "MIT",
-	"version": "0.1.0",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
-	},
-	"publisher": "vscode-samples",
-	"categories": [],
-	"keywords": [
-		"WASM",
-		"Component Model",
-		"LSP",
-		"Language Server"
-	],
-	"engines": {
-		"vscode": "^1.89.0"
-	},
-	"main": "./out/extension",
-	"browser": "./dist/web/extension",
-	"dependencies": {
-		"@vscode/wasm-wasi-lsp": "0.1.0-pre.8"
-	},
-	"devDependencies": {
-		"@types/vscode": "1.89.0",
-		"@types/node": "^20"
-	},
-	"scripts": {
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
-		"lint": "eslint",
-		"esbuild": "^0.25.0"
-	}
+  "name": "cpp-modules-analyser-vscode",
+  "description": "An LSP client for C++20 modules analysis.",
+  "author": "Tokamak Developments GK",
+  "license": "MIT",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Microsoft/vscode-extension-samples"
+  },
+  "publisher": "tokamak",
+  "categories": [],
+  "keywords": [
+    "WASM",
+    "LSP",
+    "C++",
+    "Modules",
+    "Language Server"
+  ],
+  "engines": {
+    "vscode": "^1.89.0"
+  },
+  "main": "./dist/node/extension-node",
+  "browser": "./dist/browser/extension-browser",
+  "activationEvents": [
+    "workspaceContains:**/*.{cpp,hpp,cppm,mpp,ipp,cxx,hxx,cxxm,mxx,ixx,cc,h}"
+  ],
+  "extensionDependencies": [
+    "ms-vscode.wasm-wasi-core"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "tokamak.cpp-modules-analyser-vscode.viewMode.modulesInfo",
+        "category": "View Mode",
+        "title": "Modules"
+      },
+      {
+        "command": "tokamak.cpp-modules-analyser-vscode.viewMode.importers",
+        "category": "View Mode",
+        "title": "Importers"
+      },
+      {
+        "command": "tokamak.cpp-modules-analyser-vscode.viewMode.importees",
+        "category": "View Mode",
+        "title": "Importees"
+      },
+      {
+        "command": "tokamak.cpp-modules-analyser-vscode.viewMode.select",
+        "category": "View Mode",
+        "title": "Select View Mode",
+        "icon": "$(default-view-icon)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "cppModules",
+          "name": "Modules"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "tokamak.cpp-modules-analyser-vscode.viewMode.modulesInfo",
+          "when": "view == cppModules",
+          "group": "viewMode"
+        },
+        {
+          "command": "tokamak.cpp-modules-analyser-vscode.viewMode.importers",
+          "when": "view == cppModules",
+          "group": "viewMode"
+        },
+        {
+          "command": "tokamak.cpp-modules-analyser-vscode.viewMode.importees",
+          "when": "view == cppModules",
+          "group": "viewMode"
+        },
+        {
+          "command": "tokamak.cpp-modules-analyser-vscode.viewMode.select",
+          "when": "view == cppModules",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "devDependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@eslint/js": "^9.13.0",
+    "@stylistic/eslint-plugin": "^2.9.0",
+    "@types/node": "^20",
+    "@types/vscode": "^1.101.0",
+    "@vscode/test-web": "^0.0.71",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.13.0",
+    "npm-run-all": "^4.1.5",
+    "serve": "^14.2.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.0"
+  },
+  "scripts": {
+    "build": "npm run compile",
+    "serve": "npx serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem",
+    "vscode:prepublish": "npm run build && npm run package-web",
+    "compile-web": "npm run check-types && node bin/esbuild.js browser",
+    "watch-web": "npm-run-all -p watch-web:*",
+    "watch-web:esbuild": "node bin/esbuild.js browser --watch",
+    "watch-web:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package-web": "npm run check-types && node bin/esbuild.js browser --production",
+    "pretest": "npm run compile-web",
+    "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/extensionTests.js",
+    "test-in-browser": "vscode-test-web --browserType=chromium --port=3001 --extensionDevelopmentPath=./ C:/Kantan/root/lsp/lsp-boot/liblsp-boot",
+    "compile": "npm run check-types && node bin/esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node bin/esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "lint": "eslint",
+    "check-types": "tsc --noEmit",
+    "copy-wasi-binary": "shx rm -f dist/wasm/modules-lsp.wasi && shx mkdir -p dist/wasm && shx cp C:/Kantan/build/wasi-dev/modules-lsp/modules-lsp/modules-lsp.wasi dist/wasm/"
+  },
+  "dependencies": {
+    "@vscode/wasm-component-model": "1.0.0",
+    "@vscode/wasm-wasi-lsp": "0.1.0-pre.8",
+    "glob": "^11.0.3",
+    "vscode-uri": "^3.1.0"
+  }
 }

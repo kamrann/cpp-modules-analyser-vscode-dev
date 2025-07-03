@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ModuleUnitInfo, TranslationUnitInfo, moduleKindNames } from './modules_model';
+import { ModuleUnitInfo, TranslationUnitInfo, moduleKindNames } from '../modules-model';
 
 export function configureTranslationUnitTreeItem(item: vscode.TreeItem, tu: TranslationUnitInfo) {
   if (tu.isModuleUnit) {

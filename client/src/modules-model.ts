@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import { Utils } from 'vscode-uri';
 import { createUriConverters } from '@vscode/wasm-wasi-lsp';
 
 type RawModuleInfo = any;
@@ -39,7 +39,7 @@ export interface ModuleImport {
 
 export interface TranslationUnitInfo {
   readonly uri: vscode.Uri;
-  readonly imports: ModuleImport[];
+  /*readonly*/ imports: ModuleImport[]; // @todo: non-readonly pending better solution then external module exclusion
   readonly isModuleUnit: boolean;
 }
 
@@ -69,10 +69,10 @@ export function translationUnitLocalName(tu: TranslationUnitInfo): string {
       case ModuleUnitKind.implementationPartition:
         return ":" + mu.partitionName;
       case ModuleUnitKind.implementation:
-        return path.basename(mu.uri.path);
+        return Utils.basename(mu.uri);
     }
   } else {
-    return path.basename(tu.uri.path);
+    return Utils.basename(tu.uri);
   }
 }
 
@@ -173,8 +173,18 @@ export class ModulesModel {
 
     this.modules = rawModules.map(m => createModuleInfo(m.name.join("."), findPrimaryUnit(m.name.join("."))));
 
+    const tryFindModule = (name: string): ModuleInfo | undefined => {
+      return this.modules.find(m => m.name === name);
+    };
+
+    // @todo: temp pending better solution.
+    // for now, we just remove any imports of external modules
+    for (const tu of this.translationUnits) {
+      tu.imports = tu.imports.filter(imp => imp.isPartition || tryFindModule(imp.name));
+    }
+
     const findModule = (name: string): ModuleInfo => {
-      const entry = this.modules.find(m => m.name === name);
+      const entry = tryFindModule(name);
       if (entry === undefined) {
         throw brokenDataError;
       }
