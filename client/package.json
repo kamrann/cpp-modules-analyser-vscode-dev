@@ -3,13 +3,16 @@
   "description": "An LSP client for C++20 modules analysis.",
   "author": "Tokamak Developments GK",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/Microsoft/vscode-extension-samples"
   },
   "publisher": "tokamak",
-  "categories": [],
+  "categories": [
+    "Linters",
+    "Language Packs"
+  ],
   "keywords": [
     "WASM",
     "LSP",
@@ -27,6 +30,9 @@
   ],
   "extensionDependencies": [
     "ms-vscode.wasm-wasi-core"
+  ],
+  "extensionKind": [
+    "workspace"
   ],
   "contributes": {
     "commands": [
@@ -90,7 +96,7 @@
     "@eslint/js": "^9.13.0",
     "@stylistic/eslint-plugin": "^2.9.0",
     "@types/node": "^20",
-    "@types/vscode": "^1.101.0",
+    "@types/vscode": "^1.89.0",
     "@vscode/test-web": "^0.0.71",
     "esbuild": "^0.25.0",
     "eslint": "^9.13.0",
@@ -116,11 +122,9 @@
     "watch:esbuild": "node bin/esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "lint": "eslint",
-    "check-types": "tsc --noEmit",
-    "copy-wasi-binary": "shx rm -f dist/wasm/modules-lsp.wasi && shx mkdir -p dist/wasm && shx cp C:/Kantan/build/wasi-dev/modules-lsp/modules-lsp/modules-lsp.wasi dist/wasm/"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@vscode/wasm-component-model": "1.0.0",
     "@vscode/wasm-wasi-lsp": "0.1.0-pre.8",
     "glob": "^11.0.3",
     "vscode-uri": "^3.1.0"

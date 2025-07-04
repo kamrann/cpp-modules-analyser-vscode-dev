@@ -8,6 +8,7 @@
     "build-web": "cd client && npm run compile-web && cd ..",
     "copy-dl-resources": "shx rm -f client/resources/* && shx mkdir -p client/resources && shx cp linked_resources/* client/resources/",
     "build-and-copy-resources": "npm run build && npm run copy-dl-resources",
-    "web-prelaunch": "npm run build-and-copy-resources && cd client && npm run watch-web && cd .."
+    "web-prelaunch": "npm run build-and-copy-resources && cd client && npm run watch-web && cd ..",
+    "copy-wasi-binary": "shx rm -f client/dist/wasm/modules-lsp.wasi && shx mkdir -p client/dist/wasm && shx cp C:/Kantan/build/wasi-dev/modules-lsp/modules-lsp/modules-lsp.wasi client/dist/wasm/"
   }
 }

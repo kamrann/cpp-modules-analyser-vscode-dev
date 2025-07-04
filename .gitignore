@@ -3,5 +3,9 @@ node_modules
 client/node_modules
 client/dist
 client/out
+client/.vscode-test-web
+client/resources
+linked_resources
 .env
 **/out/
+.vs/
