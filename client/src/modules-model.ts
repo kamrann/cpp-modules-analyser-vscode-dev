@@ -59,7 +59,7 @@ export function moduleUnitQualifiedName(mu: ModuleUnitInfo): string {
   return mu.partitionName ? (mu.moduleName + ":" + mu.partitionName) : mu.moduleName;
 }
 
-export function translationUnitLocalName(tu: TranslationUnitInfo): string {
+export function translationUnitName(tu: TranslationUnitInfo): string {
   if (tu.isModuleUnit) {
     const mu = tu as ModuleUnitInfo;
     switch (mu.kind) {
@@ -67,13 +67,32 @@ export function translationUnitLocalName(tu: TranslationUnitInfo): string {
         return mu.moduleName;
       case ModuleUnitKind.interfacePartition:
       case ModuleUnitKind.implementationPartition:
-        return ":" + mu.partitionName;
+        return mu.moduleName + ":" + mu.partitionName;
       case ModuleUnitKind.implementation:
+        // Implementation units have no unique name, so use source file uri
         return Utils.basename(mu.uri);
     }
   } else {
     return Utils.basename(tu.uri);
   }
+}
+
+export function translationUnitLocalName(tu: TranslationUnitInfo): string {
+  if (tu.isModuleUnit) {
+    const mu = tu as ModuleUnitInfo;
+    switch (mu.kind) {
+      case ModuleUnitKind.interfacePartition:
+      case ModuleUnitKind.implementationPartition:
+        return ":" + mu.partitionName;
+    }
+  }
+
+  return translationUnitName(tu);
+}
+
+export function translationUnitDisplayName(tu: TranslationUnitInfo): string {
+  // @note: intentionally adding space as otherwise the colon is hard to see in default theme font
+  return translationUnitName(tu).replace(':', " :");
 }
 
 export function translationUnitLocalDisplayName(tu: TranslationUnitInfo): string {

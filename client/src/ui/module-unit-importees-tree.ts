@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ModuleInfo, TranslationUnitInfo, ModuleUnitInfo, translationUnitLocalName, ModulesModel, ModuleImport } from '../modules-model';
+import { ModuleInfo, TranslationUnitInfo, ModuleUnitInfo, translationUnitDisplayName, ModulesModel, ModuleImport } from '../modules-model';
 import * as treeUtils from './tree-utils'
 
 export class ModuleUnitImporteesTreeProvider implements vscode.TreeDataProvider<ModuleUnitImporteesTreeItem> {
@@ -46,7 +46,7 @@ class TranslationUnitItem extends ModuleUnitImporteesTreeItem {
   constructor(
     private readonly translationUnitInfo: TranslationUnitInfo
   ) {
-    super(translationUnitLocalName(translationUnitInfo), translationUnitInfo.isModuleUnit && (translationUnitInfo as ModuleUnitInfo).importers.length > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+    super(translationUnitDisplayName(translationUnitInfo), translationUnitInfo.isModuleUnit && (translationUnitInfo as ModuleUnitInfo).importers.length > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
     treeUtils.configureTranslationUnitTreeItem(this, translationUnitInfo);
   }
 
