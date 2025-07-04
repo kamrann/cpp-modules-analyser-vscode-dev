@@ -1,0 +1,3 @@
+[submodule "client"]
+	path = client
+	url = git@github.com:kamrann/cpp-modules-analyser-vscode.git
