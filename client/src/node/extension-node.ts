@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node';
 import { createUriConverters } from '@vscode/wasm-wasi-lsp';
 import { determineServerOptionsDesktop } from '../server-config/server-options-configuration-desktop';
-import { initializeClient } from '../lsp-client';
+import { clientName, initializeClient } from '../lsp-client';
 import { getEnvConfigurationOverrides } from '../server-config/server-config-env';
 
 let client: LanguageClient;
@@ -49,27 +49,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     documentSelector: [{ pattern: "**/*.{cpp,cppm,mpp,ipp,cxx,cxxm,mxx,ixx,cc}" }], //hpp,hxx,h  // language: 'c++', 
     outputChannel: channel,
     uriConverters: createUriConverters(),
-    initializationOptions: {
-      tempDefines: [
-        "k_enable_modules",
-        "k_enable_tp_modules",
-        "k_enable_import_std",
-        "kdeps_enable_modules",
-        "kdeps_enable_import_std",
-      ],
-      tempExternalModules: [
-        "std",
-        "k3p.fmt",
-        "k3p.boost.json",
-        "function2",
-        "anyany",
-        "kcore",
-      ],
-    },
+    initializationOptions: {},
+    synchronize: {
+      configurationSection: 'cppModulesAnalyser'
+      // @todo: look into how this fits in (taken from https://code.visualstudio.com/api/language-extensions/language-server-extension-guide)
+      // // Notify the server about file changes to '.clientrc files contained in the workspace
+      // fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
+    }
   };
 
-  client = new LanguageClient('lspClient', 'C++ Modules Analyser LSP Client', serverOptions, clientOptions);
-
+  client = new LanguageClient(clientName, 'C++ Modules Analyser LSP Client', serverOptions, clientOptions);
   initializeClient(context, client);
 
   try {

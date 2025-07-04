@@ -12,6 +12,8 @@ import { ModuleUnitImporteesTreeProvider } from './ui/module-unit-importees-tree
 import { ModulesModel } from './modules-model';
 import { DelegatingTreeDataProvider } from './ui/tree-provider';
 
+export const clientName = 'cppModulesAnalyser';
+
 export function initializeClient(context: vscode.ExtensionContext, client: BaseLanguageClient) {
   const commandId = (id: string) => {
     return `tokamak.cpp-modules-analyser-vscode.${id}`;

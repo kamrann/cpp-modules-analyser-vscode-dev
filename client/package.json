@@ -89,6 +89,43 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "C++ Modules Analyser",
+      "properties": {
+        "cppModulesAnalyser.globalDefines": {
+          "scope": "resource",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Preprocessor define, e.g. `MY_DEFINE`, `MY_DEFINE=1`, etc."
+          },
+          "default": [],
+          "description": "Global preprocessor macro definitions, applied for all translation units."
+        },
+        "cppModulesAnalyser.externalModules": {
+          "scope": "resource",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Name of an external module"
+          },
+          "default": [],
+          "description": "Names of external modules that are not in the workspace, but are imported by translation units in the workspace."
+        },
+        "cppModulesAnalyser.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
     }
   },
   "devDependencies": {

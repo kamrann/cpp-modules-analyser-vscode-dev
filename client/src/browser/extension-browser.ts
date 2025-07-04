@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient/browser';
 import { createUriConverters } from '@vscode/wasm-wasi-lsp';
 import { determineServerOptionsWasm } from '../server-config/server-options-configuration-wasm';
-import { initializeClient } from '../lsp-client';
+import { clientName, initializeClient } from '../lsp-client';
 import { getEnvConfigurationOverrides } from '../server-config/server-config-env';
 
 let client: LanguageClient;
@@ -22,27 +22,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     documentSelector: [{ pattern: "**/*.{cpp,cppm,mpp,ipp,cxx,cxxm,mxx,ixx,cc}" }], //hpp,hxx,h  // language: 'c++', 
     outputChannel: channel,
     uriConverters: createUriConverters(),
-    initializationOptions: {
-      tempDefines: [
-        "k_enable_modules",
-        "k_enable_tp_modules",
-        "k_enable_import_std",
-        "kdeps_enable_modules",
-        "kdeps_enable_import_std",
-      ],
-      tempExternalModules: [
-        "std",
-        "k3p.fmt",
-        "k3p.boost.json",
-        "function2",
-        "anyany",
-        "kcore",
-      ],
-    },
+    initializationOptions: {},
   };
 
-  client = new LanguageClient('lspClient', 'C++ Modules Analyser LSP Client', serverOptions, clientOptions);
-
+  client = new LanguageClient(clientName, 'C++ Modules Analyser LSP Client', serverOptions, clientOptions);
   initializeClient(context, client);
 
   try {

@@ -32,6 +32,9 @@ export function determineServerOptionsWasm(
       stdio: createStdioOptions(),
       mountPoints: [
         // A descriptor signaling that the workspace folder is mapped as `/workspace` or in case of a multi-root workspace each folder is mapped as `/workspaces/folder-name`.
+        // @note: this appears to not work when opening local folders in vscode for the web...
+        // (they generate uris of the form 'file:///folder-name', which differs from desktop/github, but neither
+        // /workspace(s) not /folder-name appear to be mounted).
         { kind: 'workspaceFolder' },
         // Feels like should be using this but don't understand expectation of `path`. Keeps throwing file not found errors relating to ...\.dir.json
         //{ kind: 'extensionLocation', extension: context, path: '/', mountPoint: '/funk' },
