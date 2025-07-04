@@ -35,7 +35,6 @@ export function determineServerOptionsWasm(
         { kind: 'workspaceFolder' },
         // Feels like should be using this but don't understand expectation of `path`. Keeps throwing file not found errors relating to ...\.dir.json
         //{ kind: 'extensionLocation', extension: context, path: '/', mountPoint: '/funk' },
-        // @todo: this ../ is dodgy, perhaps should just remove the outer package.json.
         { kind: 'vscodeFileSystem', uri: vscode.Uri.joinPath(context.extensionUri, 'resources'), mountPoint: '/resources' },
       ],
       args: [...commonArgs]
