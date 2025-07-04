@@ -5,26 +5,26 @@
 
 import * as vscode from 'vscode';
 import { ServerOptions, TransportKind } from 'vscode-languageclient/node';
+import { EnvOverrides } from './server-config-env';
 
-export function determineServerOptionsNative(context: vscode.ExtensionContext, channel: vscode.OutputChannel, nativeServerLocation: string): ServerOptions {
-  const toolchainRoot = process.env.CPP_MODULES_ANALYSER_TOOLCHAIN_ROOT;
-  const dumpTrace: boolean = process.env.CPP_MODULES_DUMP_TRACE !== undefined;
-
+export function determineServerOptionsNative(
+  context: vscode.ExtensionContext,
+  channel: vscode.OutputChannel,
+  nativeServerLocation: string,
+  envOverrides: EnvOverrides): ServerOptions {
   const commonArgs: string[] = [];
 
-  if (toolchainRoot) {
-    commonArgs.push(`--toolchain-root="${toolchainRoot}"`);
+  if (envOverrides.toolchainRoot) {
+    commonArgs.push(`--toolchain-root="${envOverrides.toolchainRoot}"`);
   }
-  if (dumpTrace) {
+  if (envOverrides.dumpTrace) {
     commonArgs.push('--dump-trace');
   }
 
-  const waitDebugger = process.env.CPP_MODULES_WAIT_DEBUGGER;
-
   const nativeArgs = [];
 
-  if (waitDebugger) {
-    nativeArgs.push(`--wait-debugger=${waitDebugger}`);
+  if (envOverrides.waitDebugger) {
+    nativeArgs.push(`--wait-debugger=${envOverrides.waitDebugger}`);
   }
 
   return {

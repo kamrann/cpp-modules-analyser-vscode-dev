@@ -7,19 +7,20 @@ import * as vscode from 'vscode';
 import { Wasm, ProcessOptions } from '@vscode/wasm-wasi/v1';
 //import { WasmContext, Memory } from '@vscode/wasm-component-model';
 import { createStdioOptions, startServer } from '@vscode/wasm-wasi-lsp';
+import { EnvOverrides } from './server-config-env';
 
-export function determineServerOptionsWasm(context: vscode.ExtensionContext, channel: vscode.OutputChannel) {
-  const toolchainRoot = process.env.CPP_MODULES_ANALYSER_TOOLCHAIN_ROOT;
-  const dumpTrace: boolean = process.env.CPP_MODULES_DUMP_TRACE !== undefined;
-
+export function determineServerOptionsWasm(
+  context: vscode.ExtensionContext,
+  channel: vscode.OutputChannel,
+  envOverrides: EnvOverrides) {
   const commonArgs: string[] = [];
 
-  if (toolchainRoot) {
-    commonArgs.push(`--toolchain-root="${toolchainRoot}"`);
+  if (envOverrides.toolchainRoot) {
+    commonArgs.push(`--toolchain-root="${envOverrides.toolchainRoot}"`);
   } else {
-    commonArgs.push(`--toolchain-root="/resources"`);
+    commonArgs.push(`--toolchain-root="/resources"`); // @todo: look into why this was added. maybe web-related?
   }
-  if (dumpTrace) {
+  if (envOverrides.dumpTrace) {
     commonArgs.push('--dump-trace');
   }
 
